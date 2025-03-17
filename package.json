@@ -1,0 +1,17 @@
+{
+  "name": "A_Share_investment_Agent",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "n8n start",
+    "prod": "n8n start --tunnel"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "n8n": "^1.82.3"
+  }
+}
