@@ -6,6 +6,7 @@ from src.trade.core.stock import get_market_code
 import akshare as ak
 from datetime import timedelta
 from src.core.tushare import tspro
+from src.core.utils import logger
 
 def get_down_ratio(context:Context):
     # 获取中证1000成分股列表
@@ -58,4 +59,4 @@ def sell_stocks(context:Context):
         
 if __name__ == '__main__':
     context = Context()
-    print(get_down_ratio(context=context))
+    logger.info(get_down_ratio(context=context))

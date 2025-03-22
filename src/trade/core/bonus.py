@@ -1,8 +1,9 @@
 from .context import Context
+from src.core.utils import logger
 
 #2.2 #获取红利列表
 def bonus_filter(context:Context, stock_list):
-    #print(f'进入红利筛选前,共{len(stock_list)}只股票')
+    #logger.info(f'进入红利筛选前,共{len(stock_list)}只股票')
     year=context.previous_date.year
     start_date=datetime.date(year, 1, 1)
     end_date=context.previous_date
@@ -45,7 +46,7 @@ def bonus_filter(context:Context, stock_list):
         bonus_list=[code for code in stock_list if code not in no_year_bonus_list]
         bonus_list=short_by_market_cap(context,bonus_list)
        
-    print(f'进行实际红利筛选后,原有{len(stock_list)}只股票，筛选后剩余{len(bonus_list)}只股票')
+    logger.info(f'进行实际红利筛选后,原有{len(stock_list)}只股票，筛选后剩余{len(bonus_list)}只股票')
     
     if len(bonus_list)< g.stock_num:
         bonus_list.extend([x for x in short_by_market_cap(context,stock_list) if x not in bonus_list ][:g.stock_num-len(bonus_list)])

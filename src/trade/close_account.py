@@ -1,7 +1,7 @@
 from .core.context import Context
 from .config import g
 from src.core.order import order_target_value
-
+from src.core.utils import logger
 
 def close_account(context:Context):
     if g['trading_signal'] == False:

@@ -6,11 +6,13 @@ from src.trade.config import g,current_user_id
 from .utils import fmtDateTime
 import akshare as ak
 from src.trade.core.stock import get_market_code_by_code
+from .recorder import record
+from src.core.utils import logger
 
 def order_target_value(context: Context, stock:Position | str, target_count):
     if isinstance(stock, str):
         stock = context.portfolio.get_position(stock) 
-    print(f"股票代码: {stock.security}, 交易变化: 从 {stock.total_amount} 股调整到 {target_count} 股")
+    logger.info(f"股票代码: {stock.security}, 交易变化: 从 {stock.total_amount} 股调整到 {target_count} 股")
     
     try:
         db = mongo_client['investment_agent']
@@ -36,12 +38,23 @@ def order_target_value(context: Context, stock:Position | str, target_count):
                 ad = ak.stock_bid_ask_em(symbol=stock.security)
                 price = float(ad['value'][8] if trade_type == 'buy' else ad['value'][10])
             
-            print('买入/卖出价格: %s' % price)
-            print('交易数量: %s' % trade_shares)
-            print('交易类型: %s' % trade_type)
-            print('交易金额: %s' % (trade_shares * price))
-            print('交易手续费: %s' % (trade_shares * price * 0.001))
-            print('交易时间: %s' % context.current_dt)
+            logger.info('买入/卖出价格: %s' % price)
+            logger.info('交易数量: %s' % trade_shares)
+            logger.info('交易类型: %s' % trade_type)
+            logger.info('交易金额: %s' % (trade_shares * price))
+            logger.info('交易手续费: %s' % (trade_shares * price * 0.001))
+            logger.info('交易时间: %s' % context.current_dt)
+            global order_record
+            record['order_record'].append({
+                'code': stock.security,
+                'name': stock.security,
+                'shares': trade_shares,
+                'price': price,
+                'amount': trade_shares * price,
+                'fee': trade_shares * price * 0.001,
+                'type': trade_type,
+                'date': context.current_dt
+            })
             
             # 更新 Position 对象
             stock.update_price(price)
@@ -116,7 +129,7 @@ def order_target_value(context: Context, stock:Position | str, target_count):
                 context.portfolio.total_value += trade_amount
             
     except Exception as e:
-        print(f"交易执行失败: {str(e)}")
+        logger.info(f"交易执行失败: {str(e)}")
         raise e
     
 def buy_security(context:Context, target_list):
@@ -127,11 +140,11 @@ def buy_security(context:Context, target_list):
         for stock in target_list:
             position = context.portfolio.get_position(stock)
             if position == None or position.total_amount == 0:
-                print("买入[%s]（%s元）" % (stock,value))
+                logger.info("买入[%s]（%s元）" % (stock,value))
                 order_target_value(context,stock, value)
                 
 def close_position(context:Context, stock:Position):
-    print("卖出[%s]" % (stock.security))
+    logger.info("卖出[%s]" % (stock.security))
     order_target_value(context,stock, 0)
     
 if __name__ == "__main__":

@@ -3,6 +3,7 @@ from .config import g
 import akshare as ak
 from datetime import datetime, timedelta
 from src.core.order import order_target_value,buy_security
+from src.core.utils import logger
 
 def check_limit_up(context:Context):
     """
@@ -31,13 +32,13 @@ def check_limit_up(context:Context):
                 high_limit_price = current_data['value'][32]
 
             if current_price >= high_limit_price:
-                print('[%s]涨停，继续持有' % (stock))
+                logger.info('[%s]涨停，继续持有' % (stock))
             else:
-                print('[%s]未涨停，卖出' % (stock))
-                print('context.portfolio.positions',context.portfolio.positions)
+                logger.info('[%s]未涨停，卖出' % (stock))
+                logger.info('context.portfolio.positions',context.portfolio.positions)
                 position = context.portfolio.get_position(stock)
                 if position == None or position.total_amount == 0:
-                    print('position is None',position)
+                    logger.info('position is None',position)
                 order_target_value(context,position, 0) #TODO 警惕失败
                 g['reason_to_sell'] ='limitup'
                 g['limitup_stocks'].append(stock)
@@ -60,7 +61,7 @@ def check_remain_amount(context:Context):
             buy_security(context,target_list)
         g['reason_to_sell'] = ''
     elif g['reason_to_sell'] == 'stoploss':
-        print('有余额可用'+str(round((context.portfolio.cash),2))+'元。买入'+ str(g['etf']))
+        logger.info('有余额可用'+str(round((context.portfolio.cash),2))+'元。买入'+ str(g['etf']))
         buy_security(context,[g['etf']])
         g['reason_to_sell'] = ''
         

@@ -1,10 +1,11 @@
 
 from datetime import datetime,timedelta
 import time
-import threading
 from concurrent.futures import ThreadPoolExecutor, wait
 from src.trade.core.context import Context
 import pandas_market_calendars as mcal
+from src.core.recorder import reset_record,send_record
+from .utils import logger
 
 # 存储注册的任务，使用列表存储元组，保持注册顺序
 tasks = []  # [(task, time_str, type, day), ...]
@@ -25,7 +26,7 @@ def should_run_task(current_time: datetime, task_time: str) -> bool:
     task_hour, task_minute = map(int, task_time.split(':'))
     res = (current_time.hour == task_hour and 
             current_time.minute == task_minute)
-    # print(f"检查任务是否应该执行: 当前时间 {current_time}, 任务时间 {task_time}, 结果 {res}")
+    # logger.info(f"检查任务是否应该执行: 当前时间 {current_time}, 任务时间 {task_time}, 结果 {res}")
     return res
 
 def execute_task(task, context, task_type="daily"):
@@ -34,11 +35,11 @@ def execute_task(task, context, task_type="daily"):
         task(context)
     except Exception as e:
         import traceback
-        print(f"\n执行 {task.__name__} 任务出错:")
-        print(f"错误类型: {type(e).__name__}")
-        print(f"错误信息: {str(e)}")
-        print("详细堆栈:")
-        print(traceback.format_exc())
+        logger.info(f"\n执行 {task.__name__} 任务出错:")
+        logger.info(f"错误类型: {type(e).__name__}")
+        logger.info(f"错误信息: {str(e)}")
+        logger.info("详细堆栈:")
+        logger.info(traceback.format_exc())
 
 def is_trading_day(date):
     # 获取上交所（SSE）日历
@@ -53,7 +54,7 @@ def run_scheduler(test_mode=False, start_time=None, end_time=None):
             try:
                 if test_mode:
                     if start_time >= end_time:
-                        print("测试完成")
+                        logger.info("测试完成")
                         break
                     context = Context(current_dt=start_time)
                     current_time = start_time
@@ -65,7 +66,7 @@ def run_scheduler(test_mode=False, start_time=None, end_time=None):
                 
                 # 根据当前时间判断是否是交易日，如果不是，sleep 到下一日 00:00
                 if not is_trading_day(current_time):
-                    print(f"{current_time} 不是交易日，等待到下一日 00:00")
+                    logger.info(f"{current_time} 不是交易日，等待到下一日 00:00")
                     if test_mode:
                         # 测试模式下，跳到下一天，并跳到 09:00
                         start_time += timedelta(days=1)
@@ -82,7 +83,7 @@ def run_scheduler(test_mode=False, start_time=None, end_time=None):
                 # 非交易时段打印状态
                 current_hour = current_time.hour
                 if (current_hour >= 16 or current_hour < 8) and current_time.minute % 5 == 0:
-                    print(f"当前处于非交易时段 - {current_time}")
+                    logger.info(f"当前处于非交易时段 - {current_time}")
                     if test_mode:
                         # 测试模式下，如果 <= 8，则跳到 9；否则跳到第二天
                         if current_hour <= 8:
@@ -99,7 +100,7 @@ def run_scheduler(test_mode=False, start_time=None, end_time=None):
                 for task, time_str, task_type, day in tasks:
                     if should_run_task(current_time, time_str):
                         if task_type == "daily" or (task_type == "weekly" and day == current_weekday):
-                            print(f"准备执行任务: {task.__name__}, 时间: {time_str}, 类型: {task_type}")
+                            logger.info(f"准备执行任务: {task.__name__}, 时间: {time_str}, 类型: {task_type}")
                             future = executor.submit(execute_task, task, context, task_type)
                             futures.append(future)
                 
@@ -109,7 +110,7 @@ def run_scheduler(test_mode=False, start_time=None, end_time=None):
                         try:
                             future.result()  # 这里会抛出子线程中的异常
                         except Exception as e:
-                            print(f"任务执行失败: {str(e)}")
+                            logger.info(f"任务执行失败: {str(e)}")
                             if test_mode:
                                 raise
                 
@@ -117,20 +118,22 @@ def run_scheduler(test_mode=False, start_time=None, end_time=None):
                 if futures:
                     wait(futures)
                 
+                send_record()
                 if not test_mode:
                     # 等待到下一分钟
                     time.sleep(60 - current_time.second)
+                reset_record()
                     
             except Exception as e:
-                print(f"调度器运行出错: {str(e)}")
+                logger.info(f"调度器运行出错: {str(e)}")
                 if test_mode:
                     raise  # 测试模式下直接抛出异常
                 time.sleep(60)  # 生产环境下等待一分钟后继续
                 
     except KeyboardInterrupt:
-        print("调度器被手动停止")
+        logger.info("调度器被手动停止")
     except Exception as e:
-        print(f"调度器致命错误: {str(e)}")
+        logger.info(f"调度器致命错误: {str(e)}")
     finally:
         executor.shutdown(wait=True)  # 确保所有任务都完成后关闭线程池
 
@@ -148,4 +151,4 @@ if __name__ == "__main__":
     run_daily(sell_stocks, time='10:00') # 止损函数
     run_daily(close_account, '14:50')
     run_weekly(weekly_adjustment,2,'10:00')
-    run_scheduler(test_mode=True, start_time=datetime(2025, 3, 11), end_time=datetime(2025, 3, 22))
+    run_scheduler(test_mode=True, start_time=datetime(2025, 3, 18), end_time=datetime(2025, 3, 22))

@@ -1,4 +1,5 @@
 import datetime
+from src.core.utils import logger
 
 class Position:
     def __init__(self, security, multiplier=1, side='long', pindex=0):
@@ -128,23 +129,23 @@ if __name__ == "__main__":
     p.update_price(10.0)
     p.buy(1000, 10.0, commission=5)  # 买入1000股，价格10元，手续费5元
     
-    print(p)  # <Position 600000 | Amount: 1000 | AvgCost: 10.01 | Value: 10000.00>
-    print(f"累计成本: {p.acc_avg_cost:.4f}")  # (1000 * 10 +5)/1000 = 10.005
+    logger.info(p)  # <Position 600000 | Amount: 1000 | AvgCost: 10.01 | Value: 10000.00>
+    logger.info(f"累计成本: {p.acc_avg_cost:.4f}")  # (1000 * 10 +5)/1000 = 10.005
     
     # 测试2: 加仓操作
     p.update_price(12.0)
     p.buy(500, 12.5, commission=5)  # 加仓500股，价格12.5
     
-    print(p)  # <Position 600000 | Amount: 1500 | AvgCost: 11.01 | Value: 18000.00>
-    print(f"累计成本: {p.acc_avg_cost:.4f}")  # (1000 * 10.005 + 500 * 12.5 +5)/1500 ≈ 11.0033
+    logger.info(p)  # <Position 600000 | Amount: 1500 | AvgCost: 11.01 | Value: 18000.00>
+    logger.info(f"累计成本: {p.acc_avg_cost:.4f}")  # (1000 * 10.005 + 500 * 12.5 +5)/1500 ≈ 11.0033
     
     # 测试3: 部分卖出
     p.update_price(15.0)
     p.sell(800, 15.0, commission=5)  # 卖出800股
     
-    print(p)  # <Position 600000 | Amount: 700 | AvgCost: 11.01 | Value: 10500.00>
-    print(f"累计成本: {p.acc_avg_cost:.4f}")  # (1500 * 11.0033 - 800 * 15 +5)/700 ≈ 4.288
+    logger.info(p)  # <Position 600000 | Amount: 700 | AvgCost: 11.01 | Value: 10500.00>
+    logger.info(f"累计成本: {p.acc_avg_cost:.4f}")  # (1500 * 11.0033 - 800 * 15 +5)/700 ≈ 4.288
     
     # 测试4: 每日结算
     p.daily_settlement(14.0)
-    print(f"结算后持仓成本: {p.hold_cost}")  # 14.0
+    logger.info(f"结算后持仓成本: {p.hold_cost}")  # 14.0

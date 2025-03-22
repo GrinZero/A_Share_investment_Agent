@@ -1,3 +1,5 @@
+from src.core.utils import logger
+
 def convert_chinese_number(amount_str):
     """将中文金额字符串转换为浮点数
     Args:
@@ -36,7 +38,7 @@ def convert_chinese_number(amount_str):
         value = value * 10000  # 万转元
         return value
     except ValueError:
-        print(f"无法转换金额: {amount_str}")
+        logger.info(f"无法转换金额: {amount_str}")
         return 0.0
 
 # 使用示例：

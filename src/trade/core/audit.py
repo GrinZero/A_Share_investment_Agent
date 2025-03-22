@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 import akshare as ak
 from .context import Context
 import pandas as pd
+from src.core.utils import logger
 
 '''
 审计意见类型编码
@@ -34,8 +35,8 @@ def filter_audit(context:Context, market_stock_list):
         last_year = (lstd.replace(year=lstd.year - 3, month=1, day=1)).strftime('%Y-%m-%d')
         report_list = ak.stock_profit_sheet_by_yearly_em(symbol=stock)
         report_list['REPORT_DATE'] = pd.to_datetime(report_list['REPORT_DATE'])
-        # print("报表列名:", report_list.columns.tolist())
-        # print("数据预览:\n", report_list.head())
+        # logger.info("报表列名:", report_list.columns.tolist())
+        # logger.info("数据预览:\n", report_list.head())
         
         # 筛选 REPORT_DATE 列中大于等于 last_year 的行，小于等于 context.current_dt 的行
         filtered_df = report_list[(report_list['REPORT_DATE'] >= last_year) & (report_list['REPORT_DATE'] <= context.current_dt)]
@@ -62,6 +63,6 @@ if __name__ == '__main__':
         v = list(asd['OPINION_TYPE'].values)
         for i in v:
             s.add(i)
-        print(s)
-    print(s)
+        logger.info(s)
+    logger.info(s)
         

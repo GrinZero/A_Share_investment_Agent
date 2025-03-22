@@ -5,6 +5,7 @@ from datetime import datetime,timedelta
 from ..config import g
 from src.utils.covert import convert_chinese_number
 from .audit import filter_audit
+from src.core.utils import logger
 
 def is_paused(stock_data):
     """判断股票是否停牌
@@ -134,10 +135,10 @@ def get_market_code_by_code(code, variant='start', style='upper'):
 
 #2 过滤各种股票
 def filter_stocks(context:Context, stock_list):
-    print('批量筛选股票中')
+    logger.info('批量筛选股票中')
     current_data = ak.stock_zh_a_spot_em() #! 重要，想办法换成回测的分钟级数据
     current_data.set_index('代码', inplace=True)
-    # print('current_data',current_data)
+    # logger.info('current_data',current_data)
     # 涨跌停和最近价格的判断
     # last_prices = history(1, unit='1m', field='close', security_list=stock_list)
     
@@ -168,7 +169,7 @@ def filter_stocks(context:Context, stock_list):
 def query_market_codes(context:Context, initial_list):
     now = context.current_dt
     filtered_stocks = []
-    print('批量筛选股票财务数据中，该过程耗时可能长')
+    logger.info('批量筛选股票财务数据中，该过程耗时可能长')
     for stock in initial_list:
         try:
             # 获取财务指标
@@ -206,7 +207,7 @@ def query_market_codes(context:Context, initial_list):
                 break
                 
         except Exception as e:
-            print(f"处理股票 {stock} 时出错: {str(e)}")
+            logger.info(f"处理股票 {stock} 时出错: {str(e)}")
             continue
     
     sorted_stocks = sorted(filtered_stocks, key=lambda x: x[1])

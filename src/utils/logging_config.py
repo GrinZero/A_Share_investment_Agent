@@ -3,8 +3,16 @@ import time
 import logging
 from typing import Optional
 
+class ListHandler(logging.Handler):
+    def __init__(self, record_list):
+        super().__init__()
+        self.record_list = record_list
 
-def setup_logger(name: str, log_dir: Optional[str] = None) -> logging.Logger:
+    def emit(self, record):
+        log_entry = self.format(record)
+        self.record_list.append(log_entry)
+
+def setup_logger(name: str, log_dir: Optional[str] = None, record_list: Optional[list] = None) -> logging.Logger:
     """设置统一的日志配置
 
     Args:
@@ -46,6 +54,12 @@ def setup_logger(name: str, log_dir: Optional[str] = None) -> logging.Logger:
     file_handler = logging.FileHandler(log_file, encoding='utf-8')
     file_handler.setLevel(logging.DEBUG)  # 文件记录DEBUG级别及以上的日志
     file_handler.setFormatter(formatter)
+
+    # 如果提供了 record_list，则添加 ListHandler
+    if record_list is not None:
+        lh = ListHandler(record_list)
+        lh.setFormatter(formatter)
+        logger.addHandler(lh)
 
     # 添加处理器到日志记录器
     logger.addHandler(console_handler)
