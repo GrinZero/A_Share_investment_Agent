@@ -24,4 +24,4 @@ class Portfolio:
             self.total_value = self.cash
     
     def get_position(self, code):
-        return self.positions.get(code)
+        return self.positions.get(code, Position(code))

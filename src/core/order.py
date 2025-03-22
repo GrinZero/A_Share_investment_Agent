@@ -9,7 +9,7 @@ from src.trade.core.stock import get_market_code_by_code
 
 def order_target_value(context: Context, stock:Position | str, target_count):
     if isinstance(stock, str):
-        stock = Position(stock)
+        stock = context.portfolio.get_position(stock) 
     print(f"股票代码: {stock.security}, 交易变化: 从 {stock.total_amount} 股调整到 {target_count} 股")
     
     try:
@@ -36,54 +36,46 @@ def order_target_value(context: Context, stock:Position | str, target_count):
                 ad = ak.stock_bid_ask_em(symbol=stock.security)
                 price = float(ad['value'][8] if trade_type == 'buy' else ad['value'][10])
             
-            # 获取股票名称
-            stock_name = stock.security
+            print('买入/卖出价格: %s' % price)
+            print('交易数量: %s' % trade_shares)
+            print('交易类型: %s' % trade_type)
+            print('交易金额: %s' % (trade_shares * price))
+            print('交易手续费: %s' % (trade_shares * price * 0.001))
+            print('交易时间: %s' % context.current_dt)
             
-            # 计算持仓成本和收益
+            # 更新 Position 对象
+            stock.update_price(price)
             if trade_type == 'buy':
-                if stock.total_amount == 0:  # 新建仓位
-                    cost_price = price
-                    buy_date = context.current_dt
-                    hold_days = 0
-                else:  # 加仓，计算平均成本
-                    total_cost = stock.total_amount * stock.cost_price + trade_shares * price
-                    cost_price = total_cost / target_count
-                    buy_date = stock.buy_date
-                    hold_days = (context.current_dt - buy_date).days
-            else:  # 卖出，保持原有成本价
-                cost_price = stock.cost_price
-                buy_date = stock.buy_date
-                hold_days = (context.current_dt - buy_date).days
-            
-            market_value = target_count * price
-            profit = market_value - (target_count * cost_price)
-            profit_pct = (profit / (target_count * cost_price)) * 100 if target_count > 0 else 0
+                stock.buy(trade_shares, price, trade_shares * price * 0.001)
+            else:
+                stock.sell(trade_shares, price, trade_shares * price * 0.001)
             
             # 更新持仓记录
             position_update = {
                 'code': stock.security,
-                'name': stock_name,
-                'shares': target_count,
-                'cost_price': cost_price,
-                'current_price': price,
-                'market_value': market_value,
-                'profit': profit,
-                'profit_pct': profit_pct,
-                'hold_days': hold_days,
-                'buy_date': buy_date,
+                'name': stock.security,
+                'shares': stock.total_amount,
+                'cost_price': stock.avg_cost,
+                'current_price': stock.price,
+                'market_value': stock.value,
+                'profit': stock.floating_pnl,
+                'profit_pct': (stock.floating_pnl / (stock.avg_cost * stock.total_amount)) * 100 if stock.total_amount > 0 else 0,
+                'hold_days': (context.current_dt - stock.init_time).days if stock.init_time else 0,
+                'buy_date': stock.init_time or context.current_dt,
                 'highest_price': max(price, stock.highest_price if hasattr(stock, 'highest_price') else price),
-                'stoploss_price': cost_price * 0.9,  # 设置止损价为成本价的90%
+                'stoploss_price': stock.avg_cost * 0.9,
                 'updated_at': context.current_dt,
                 'user_id': current_user_id
             }
             
-            if target_count > 0:  # 有持仓才更新或创建
+            # 数据库操作
+            if stock.total_amount > 0:
                 db.positions.update_one(
                     {'code': stock.security, 'user_id': current_user_id},
                     {'$set': position_update},
                     upsert=True
                 )
-            else:  # 清仓则删除持仓记录
+            else:
                 db.positions.delete_one({'code': stock.security, 'user_id': current_user_id})
             
             # 创建交易记录
@@ -105,24 +97,22 @@ def order_target_value(context: Context, stock:Position | str, target_count):
             db.portfolios.update_one(
                 {'user_id': current_user_id},
                 {'$inc': {
-                    'cash': trade_amount,
+                    'cash': trade_amount - transaction['fee'],
                     'total_value': -trade_amount
                 }}
             )
             
             # 更新内存中的 portfolio
             if trade_type == 'buy':
-                stock.update_from_dict(position_update)
                 context.portfolio.positions[stock.security] = stock
-                context.portfolio.cash -= trade_amount
+                context.portfolio.cash -= (trade_amount + transaction['fee'])
                 context.portfolio.total_value -= trade_amount
             else:
-                if target_count == 0:
+                if stock.total_amount == 0:
                     del context.portfolio.positions[stock.security]
                 else:
-                    stock.update_from_dict(position_update)
                     context.portfolio.positions[stock.security] = stock
-                context.portfolio.cash += trade_amount
+                context.portfolio.cash += (trade_amount - transaction['fee'])
                 context.portfolio.total_value += trade_amount
             
     except Exception as e:
@@ -149,6 +139,6 @@ if __name__ == "__main__":
     context.set_current_dt(
         datetime(2025, 3, 21, 14, 30)
     )
-    # g['in_history'] = True
-    order_target_value(context, '000001', 10000)
+    g['in_history'] = True
+    order_target_value(context, '000001', 1000)
 

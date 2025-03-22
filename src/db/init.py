@@ -47,8 +47,8 @@ def create_example_portfolio(db):
         portfolio = {
             'user_id': 'example_user',
             'name': '示例A股组合',
-            'cash': 1000000,  # 100万初始资金
-            'total_value': 1000000,
+            'cash': 100000,  # 10万初始资金
+            'total_value': 0, # 初始总市值
             'created_at': datetime.utcnow(),
             'updated_at': datetime.utcnow()
         }
@@ -74,7 +74,8 @@ def create_example_portfolio(db):
             'updated_at': datetime.utcnow()
         }
         
-        db.positions.insert_one(position)
+        # 但是不要插入
+        # db.positions.insert_one(position)
         
         # 创建示例交易记录
         transaction = {
@@ -91,7 +92,8 @@ def create_example_portfolio(db):
             'created_at': datetime.utcnow()
         }
         
-        db.transactions.insert_one(transaction)
+        # 但是不要插入
+        # db.transactions.insert_one(transaction)
         
         print("示例数据创建成功")
         
