@@ -13,6 +13,20 @@ services:
     volumes:
       - mongodb_data:/data/db
 
+  n8n:
+    image: docker.n8n.io/n8nio/n8n
+    container_name: n8n
+    restart: always
+    ports:
+      - "5678:5678"
+    environment:
+      - GENERIC_TIMEZONE=Asia/Shanghai
+      - TZ=Asia/Shanghai
+    volumes:
+      - n8n_data:/home/node/.n8n
+
 volumes:
   mongodb_data:
+    driver: local
+  n8n_data:
     driver: local
