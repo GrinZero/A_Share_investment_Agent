@@ -9,42 +9,59 @@ from src.trade.core.stock import get_market_code_by_code
 from .recorder import record
 from src.core.utils import logger
 
-def order_target_value(context: Context, stock:Position | str, target_count):
+def order_target_value(context: Context, stock:Position | str, target_value):
+    """
+    按照目标价值下单
+    
+    Args:
+        context: 上下文对象
+        stock: 股票对象或股票代码
+        target_value: 期望的标的最终价值
+    """
     if isinstance(stock, str):
         stock = context.portfolio.get_position(stock) 
-    logger.info(f"股票代码: {stock.security}, 交易变化: 从 {stock.total_amount} 股调整到 {target_count} 股")
     
     try:
         db = mongo_client['investment_agent']
         
+        # 获取当前价格
+        if g['in_history']:
+            ad = ak.stock_zh_a_minute(
+                symbol = get_market_code_by_code(stock.security,style="lower"),
+                period="1",
+            )
+            ad.set_index('day', inplace=True)
+            day = context.current_dt
+            day = day.replace(second=0)
+            day = fmtDateTime(day)
+            price = float(ad.loc[day]['close'])
+        else:
+            ad = ak.stock_bid_ask_em(symbol=stock.security)
+            price = float(ad['value'][8])  # 默认使用买入价
+        
+        # 计算目标股数（向下取整到100的倍数）
+        multiplier = 100  # 股票的乘数为100
+        margin_rate = 1   # 股票的保证金率为1
+        current_value = stock.total_amount * price * margin_rate
+        target_shares = int((target_value / (price * margin_rate * multiplier))) * multiplier
+        
         # 计算交易数量和方向
-        trade_shares = target_count - stock.total_amount
+        current_shares = stock.total_amount
+        trade_shares = target_shares - current_shares
         trade_type = 'buy' if trade_shares > 0 else 'sell'
         trade_shares = abs(trade_shares)
         
+        logger.info(f"股票代码: {stock.security}, 当前价格: {price}, 目标价值: {target_value}")
+        logger.info(f"交易变化: 从 {current_shares} 股({current_value:.2f}元)调整到 {target_shares} 股({target_shares * price:.2f}元)")
+        
         if trade_shares > 0:
-            # 获取当前价格
-            if g['in_history']:
-                ad = ak.stock_zh_a_minute(
-                    symbol = get_market_code_by_code(stock.security,style="lower"),
-                    period="1",
-                )
-                ad.set_index('day', inplace=True)
-                day = context.current_dt
-                day = day.replace(second=0)
-                day = fmtDateTime(day)
-                price = float(ad.loc[day]['close'])
-            else:
-                ad = ak.stock_bid_ask_em(symbol=stock.security)
-                price = float(ad['value'][8] if trade_type == 'buy' else ad['value'][10])
-            
             logger.info('买入/卖出价格: %s' % price)
             logger.info('交易数量: %s' % trade_shares)
             logger.info('交易类型: %s' % trade_type)
             logger.info('交易金额: %s' % (trade_shares * price))
             logger.info('交易手续费: %s' % (trade_shares * price * 0.001))
             logger.info('交易时间: %s' % context.current_dt)
-            global order_record
+            
             record['order_record'].append({
                 'code': stock.security,
                 'name': stock.security,
