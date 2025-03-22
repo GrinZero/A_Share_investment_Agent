@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 import akshare as ak
 from src.core.utils import fmtDate
 import pandas as pd
-from core.order import buy_security,order_target_value
+from src.core.order import buy_security,order_target_value
 from .core.stock import get_stock_list
 
 def adjust_stock_num(context: Context):
@@ -36,7 +36,6 @@ def weekly_adjustment(context: Context):
     # 判断今天是否为账户资金再平衡的日期
     if g['trading_signal'] and g['adjust_num']:
         new_num = adjust_stock_num(context)
-        print(new_num)
         if new_num == 0:
             buy_security(context, [g['etf']])
             print('MA指示指数大跌，持有%s' % g['etf'])
@@ -45,18 +44,17 @@ def weekly_adjustment(context: Context):
                 g['stock_num'] = new_num
                 print('调整股票数量为：%d' % new_num)
             g['target_list'] = get_stock_list(context)[:g['stock_num']]
-            # 注意买的时候要确保购买价格 last_prices <= g['highest']
-            print(str(g.target_list))
+            print(str(g['target_list']))
             
             sell_list = [stock for stock in g['hold_list'] if stock not in g['target_list'] and stock not in g['yesterday_HL_list']]
             hold_list = [stock for stock in g['hold_list'] if stock in g['target_list'] or stock in g['yesterday_HL_list']]
             print("已持有[%s]" % (str(hold_list)))
             print("卖出[%s]" % (str(sell_list)))
             
-            sell_positions = [context.portfolio.positions[stock] for stock in sell_list]
+            sell_positions = [context.portfolio.get_position(stock) for stock in sell_list]
             for position in sell_positions:
-                order_target_value(position, 0)
-                
+                if position:
+                    order_target_value(context,position, 0)
             buy_security(context, g['target_list'])
     else:
         buy_security(context, [g['etf']])

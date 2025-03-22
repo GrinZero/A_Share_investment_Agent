@@ -23,3 +23,5 @@ class Portfolio:
             self.cash = 1e6  # 初始资金
             self.total_value = self.cash
     
+    def get_position(self, code):
+        return self.positions.get(code)

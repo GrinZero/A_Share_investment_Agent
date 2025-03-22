@@ -2,7 +2,7 @@ from .core.context import Context
 from .config import g
 import akshare as ak
 from datetime import datetime, timedelta
-from core.order import order_target_value,buy_security
+from src.core.order import order_target_value,buy_security
 
 def check_limit_up(context:Context):
     """
@@ -17,10 +17,8 @@ def check_limit_up(context:Context):
                 current_data = ak.stock_zh_a_hist_min_em(
                     symbol=stock, 
                     period="1", 
-                    # start_date=(now_time - timedelta(minutes=1)).strftime('%Y-%m-%d %H:%M:%S'),
-                    # end_date=datetime.now().strftime('%Y-%m-%d %H:%M:%S'), 
-                    start_date='2025-03-20 13:59:02',
-                    end_date='2025-03-20 14:00:03', 
+                    start_date=(now_time - timedelta(minutes=1)).strftime('%Y-%m-%d %H:%M:%S'),
+                    end_date=datetime.now().strftime('%Y-%m-%d %H:%M:%S'), 
                     adjust=""
                 )
                 current_price = current_data['收盘'][0]
@@ -37,8 +35,10 @@ def check_limit_up(context:Context):
             else:
                 print('[%s]未涨停，卖出' % (stock))
                 print('context.portfolio.positions',context.portfolio.positions)
-                position = context.portfolio.positions[stock]
-                order_target_value(position, 0) #TODO 警惕失败
+                position = context.portfolio.get_position(stock)
+                if position == None or position.total_amount == 0:
+                    print('position is None',position)
+                order_target_value(context,position, 0) #TODO 警惕失败
                 g['reason_to_sell'] ='limitup'
                 g['limitup_stocks'].append(stock)
                 
@@ -47,7 +47,7 @@ def check_remain_amount(context:Context):
     """
     检查当天剩余资金是否足够
     """
-    if g['reason_to_sell'] is 'limitup':
+    if g['reason_to_sell'] == 'limitup':
         g['hold_list'] = []
         for position in list(context.portfolio.positions.values()):
             stock = position.security
@@ -57,9 +57,9 @@ def check_remain_amount(context:Context):
             num_stocks_to_buy = min(len(g['limitup_stocks']), g['stock_num'] - len(context.portfolio.positions))
             target_list = [stock for stock in g['target_list'] if stock not in g['limitup_stocks']][:num_stocks_to_buy]
             log.info('有余额可用'+str(round((context.portfolio.cash),2))+'元。买入'+ str(target_list))
-            # buy_security(context,target_list)
+            buy_security(context,target_list)
         g['reason_to_sell'] = ''
-    elif g['reason_to_sell'] is 'stoploss':
+    elif g['reason_to_sell'] == 'stoploss':
         print('有余额可用'+str(round((context.portfolio.cash),2))+'元。买入'+ str(g['etf']))
         buy_security(context,[g['etf']])
         g['reason_to_sell'] = ''

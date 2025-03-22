@@ -46,6 +46,8 @@ def filter_audit(context:Context, market_stock_list):
             expection_Audit_list.append(stock)
         else:
             final_list.append(stock)
+    # 返回时去掉市场前缀
+    final_list = [stock[2:] for stock in final_list]
     return final_list
 
 if __name__ == '__main__':

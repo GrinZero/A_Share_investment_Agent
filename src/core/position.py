@@ -23,6 +23,10 @@ class Position:
         # 市场数据
         self.price = 0.0                  # 最新行情价格
         
+    def update_from_dict(self, data):
+        for key, value in data.items():
+            setattr(self, key, value)    
+        
     @property
     def closeable_amount(self):
         """可平仓数量(示例按T+1规则，需根据具体市场规则实现)"""

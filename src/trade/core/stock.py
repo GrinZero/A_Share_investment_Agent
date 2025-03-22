@@ -68,30 +68,74 @@ def is_limit(stock_data):
     return is_up_limit, is_down_limit
 
 stock_info_a_sh_code_name_df = None
-def get_market_code(stock_name, stock_code):
+def get_market_code(stock_name, stock_code, variant='start'):
     """
     根据股票代码和名称判断所属市场
     :param stock_code: 股票代码
     :param name: 股票名称
+    :param variant: 匹配方式，'start'，如 SZ000001，'end' 如 000001.SZ
+    :return: 所属市场代码
     :return: SZ000001
     """
     global stock_info_a_sh_code_name_df
+    
+    if stock_code.startswith('9') or stock_code.startswith('8') or stock_code.startswith('4'):
+        if variant == 'start':
+            return "BJ" + stock_code
+        else:
+            return stock_code + ".BJ"
+    
     if stock_info_a_sh_code_name_df is None:
         stock_info_a_sh_code_name_df = ak.stock_info_sh_name_code()
         stock_info_a_sh_code_name_df.set_index('证券简称', inplace=True)
+        
     if stock_name in stock_info_a_sh_code_name_df.index:
         market_code = stock_info_a_sh_code_name_df.loc[stock_name, '证券代码']
-        return "SH" + market_code
+        if variant =='start':
+            return "SH" + market_code
+        else:
+            return market_code + ".SH"
     else:
-        return "SZ" + stock_code
+        if variant =='start':
+            return "SZ" + stock_code
+        else:
+            return stock_code + ".SZ"
     
 
+def get_market_code_by_code(code, variant='start', style='upper'):
+    """
+    根据股票代码判断所属市场
+    :param stock_code: 股票代码
+    :param variant: 匹配方式，'start'，如 SZ000001，'end' 如 000001.SZ
+    :param style: 股票代码风格，'upper'，如 SH000001，'lower' 如 sh000001
+    :return: 所属市场代码
+    """
+    fix = ''
+    if code.startswith('9') or code.startswith('8') or code.startswith('4'):
+        fix = "BJ"
     
+    if (code.startswith('000') or code.startswith('001') or code.startswith('002') 
+        or code.startswith('003') or code.startswith('004') or code.startswith('005') 
+        or code.startswith("300") or code.startswith("301") or code.startswith("302")):
+        fix = "SZ"
+        
+    if code.startswith('600') or code.startswith('601') or code.startswith('603') or code.startswith('605') or code.startswith('688'):
+        fix = "SH"
+    
+    if style == 'lower':
+        code = code.lower()
+
+    if variant =='start':
+        return fix + code
+    else:
+        return code + "." + fix
+
 
 
 #2 过滤各种股票
 def filter_stocks(context:Context, stock_list):
-    current_data = ak.stock_zh_a_spot_em()
+    print('批量筛选股票中')
+    current_data = ak.stock_zh_a_spot_em() #! 重要，想办法换成回测的分钟级数据
     current_data.set_index('代码', inplace=True)
     # print('current_data',current_data)
     # 涨跌停和最近价格的判断
@@ -124,6 +168,7 @@ def filter_stocks(context:Context, stock_list):
 def query_market_codes(context:Context, initial_list):
     now = context.current_dt
     filtered_stocks = []
+    print('批量筛选股票财务数据中，该过程耗时可能长')
     for stock in initial_list:
         try:
             # 获取财务指标
@@ -180,15 +225,14 @@ def get_stock_list(context:Context):
         set(index_stock_df.index)
     )
     
-
     initial_list = filter_stocks(context, index_stock_list)
     
     # 国九更新：过滤近一年净利润为负且营业收入小于1亿的
     # 国九更新：过滤近一年期末净资产为负的 (经查询没有为负数的，所以直接pass这条)
     # 国九更新：过滤近一年审计建议无法出具或者为负面建议的 (经过净利润等筛选，审计意见几乎不会存在异常)
-    # data = query_market_codes(context, initial_list)[:int(g['stock_num'] * g['stock_pool_mult'])]
+    data = query_market_codes(context, initial_list)[:int(g['stock_num'] * g['stock_pool_mult'])]
 
-    # final_list = list(data)
+    final_list = list(data)
     
     # 过滤审计意见
     if g['filter_audit']:
@@ -213,4 +257,7 @@ def get_stock_list(context:Context):
         log.info('无适合股票，买入ETF')
         return [g['etf']]
     else:
-        return [stock for stock in final_list if stock in g['hold_list']]
+        # 注意买的时候要确保购买价格 last_prices <= g['highest']
+        current_data = ak.stock_zh_a_spot_em()
+        current_data.set_index('代码', inplace=True)
+        return [stock for stock in final_list if stock in g['hold_list'] or current_data.loc[stock, '最新价'] <= g['highest']]

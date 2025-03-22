@@ -27,6 +27,8 @@ backoff = "^2.2.1"
 google-genai = "^0.6.0"
 pymongo = "^4.6.2"
 motor = "^3.3.2"
+pandas-market-calendars = "^4.6.1"
+tushare = "^1.4.19"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.4.0"
