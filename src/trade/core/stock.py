@@ -199,6 +199,7 @@ def query_market_codes(context:Context, initial_list):
             # 应用筛选条件
             if (net_profit > 0 and 
                 operating_revenue > 1e8 and 
+                np_parent_company_owners > 0 and
                 roe > 0 and 
                 roa > 0):
                 filtered_stocks.append((stock,total_mv))

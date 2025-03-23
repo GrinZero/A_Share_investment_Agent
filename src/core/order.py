@@ -42,7 +42,8 @@ def order_target_value(context: Context, stock:Position | str, target_value):
         # 计算目标股数（向下取整到100的倍数）
         multiplier = 100  # 股票的乘数为100
         margin_rate = 1   # 股票的保证金率为1
-        current_value = stock.total_amount * price * margin_rate
+        current_value = stock.total_amount * price * margin_rate # 当前市值
+        # 如果是买入，向下取整；如果是卖出，向上取整
         target_shares = int((target_value / (price * margin_rate * multiplier))) * multiplier
         
         # 计算交易数量和方向
@@ -120,10 +121,16 @@ def order_target_value(context: Context, stock:Position | str, target_value):
                 'created_at': context.current_dt,
                 'user_id': current_user_id
             }
+
+            trade_amount = trade_shares * price * (1 if trade_type == 'sell' else -1)
+            if trade_type == 'buy' and context.portfolio.cash < (trade_amount + transaction['fee']):
+                logger.error('现金不足，无法完成交易')
+                return
+
+
             db.transactions.insert_one(transaction)
             
             # 更新投资组合
-            trade_amount = trade_shares * price * (1 if trade_type == 'sell' else -1)
             db.portfolios.update_one(
                 {'user_id': current_user_id},
                 {'$inc': {
