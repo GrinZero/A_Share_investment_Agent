@@ -4,7 +4,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor, wait
 from src.trade.core.context import Context
 import pandas_market_calendars as mcal
-from src.core.recorder import reset_record,send_record
+from src.core.recorder import reset_record, send_record, process_record_queue
 from .utils import logger
 
 # 存储注册的任务，使用列表存储元组，保持注册顺序
@@ -35,11 +35,12 @@ def execute_task(task, context, task_type="daily"):
         task(context)
     except Exception as e:
         import traceback
-        logger.info(f"\n执行 {task.__name__} 任务出错:")
-        logger.info(f"错误类型: {type(e).__name__}")
-        logger.info(f"错误信息: {str(e)}")
-        logger.info("详细堆栈:")
-        logger.info(traceback.format_exc())
+        error_msg = f"\n执行 {task.__name__} 任务出错:\n"
+        error_msg += f"错误类型: {type(e).__name__}\n"
+        error_msg += f"错误信息: {str(e)}\n"
+        error_msg += "详细堆栈:\n"
+        error_msg += traceback.format_exc()
+        logger.info(error_msg)
 
 def is_trading_day(date):
     # 获取上交所（SSE）日历
@@ -104,24 +105,18 @@ def run_scheduler(test_mode=False, start_time=None, end_time=None):
                             future = executor.submit(execute_task, task, context, task_type)
                             futures.append(future)
                 
-                # 检查所有任务的执行结果
-                if futures:
-                    for future in futures:
-                        try:
-                            future.result()  # 这里会抛出子线程中的异常
-                        except Exception as e:
-                            logger.info(f"任务执行失败: {str(e)}")
-                            if test_mode:
-                                raise
-                
                 # 等待所有任务完成后再进入下一分钟
                 if futures:
                     wait(futures)
                 
+                # 处理队列中的记录并发送
+                process_record_queue()  # 确保处理所有队列中的记录
                 send_record()
+                
                 if not test_mode:
                     # 等待到下一分钟
                     time.sleep(60 - current_time.second)
+                
                 reset_record()
                     
             except Exception as e:
@@ -135,6 +130,9 @@ def run_scheduler(test_mode=False, start_time=None, end_time=None):
     except Exception as e:
         logger.info(f"调度器致命错误: {str(e)}")
     finally:
+        # 确保发送最后的记录
+        process_record_queue()
+        send_record()
         executor.shutdown(wait=True)  # 确保所有任务都完成后关闭线程池
 
 if __name__ == "__main__":

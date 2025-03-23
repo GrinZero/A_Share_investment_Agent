@@ -6,8 +6,8 @@ from src.trade.config import g,current_user_id
 from .utils import fmtDateTime
 import akshare as ak
 from src.trade.core.stock import get_market_code_by_code
-from .recorder import record
 from src.core.utils import logger
+from src.core.recorder import add_order_record
 
 def order_target_value(context: Context, stock:Position | str, target_value):
     """
@@ -62,7 +62,7 @@ def order_target_value(context: Context, stock:Position | str, target_value):
             logger.info('交易手续费: %s' % (trade_shares * price * 0.001))
             logger.info('交易时间: %s' % context.current_dt)
             
-            record['order_record'].append({
+            add_order_record({
                 'code': stock.security,
                 'name': stock.security,
                 'shares': trade_shares,
