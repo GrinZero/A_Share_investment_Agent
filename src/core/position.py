@@ -1,10 +1,16 @@
 import datetime
 from src.core.utils import logger
+import akshare as ak
 
 class Position:
-    def __init__(self, security, multiplier=1, side='long', pindex=0):
+    def __init__(self, security, name = None, multiplier=1, side='long', pindex=0):
         # 基础信息
         self.security = security          # 标的代码
+        self.name = name or security      # 标的名称
+        if not name:
+            d = ak.stock_individual_info_em(symbol=security)['value']
+            self.name = d[1]
+        
         self.multiplier = multiplier      # 合约乘数(股票为1)
         self.side = side                  # 仓位方向
         self.pindex = pindex              # 子账户索引

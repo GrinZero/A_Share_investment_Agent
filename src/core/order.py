@@ -65,7 +65,7 @@ def order_target_value(context: Context, stock:Position | str, target_value):
             
             add_order_record({
                 'code': stock.security,
-                'name': stock.security,
+                'name': stock.name or stock.security,
                 'shares': trade_shares,
                 'price': price,
                 'amount': trade_shares * price,
@@ -84,7 +84,7 @@ def order_target_value(context: Context, stock:Position | str, target_value):
             # 更新持仓记录
             position_update = {
                 'code': stock.security,
-                'name': stock.security,
+                'name': stock.name or stock.security,
                 'shares': stock.total_amount,
                 'cost_price': stock.avg_cost,
                 'current_price': stock.price,

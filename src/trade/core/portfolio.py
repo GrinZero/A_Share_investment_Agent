@@ -11,7 +11,7 @@ class Portfolio:
             self.positions:Dict[str,Position] = {}
             # 初始化持仓
             for pos_data in portfolio_data['positions']:
-                position = Position(pos_data['code'])
+                position = Position(pos_data['code'],name=pos_data['name'])
                 position.total_amount = pos_data['shares']
                 position.avg_cost = pos_data['cost_price']
                 position.price = pos_data['current_price']
