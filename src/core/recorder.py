@@ -61,10 +61,9 @@ def send_record():
     # 先处理队列中的所有记录
     process_record_queue()
     
-    print('发送记录',current_record)
-    # 检查是否有记录需要发送
+    # 检查是否有订单记录需要发送
     with record_lock:
-        if not current_record['order_record'] and not current_record['log_record']:
+        if not current_record['order_record']:
             return None
         
         # 复制当前记录用于发送
@@ -77,6 +76,8 @@ def send_record():
     # 发送记录
     if webhook_url:
         try:
+            if len(record_to_send['order_record'])==0:
+                return None
             headers = {'Content-Type': 'application/json'}
             data = json.dumps(record_to_send)
             response = requests.post(webhook_url, headers=headers, data=data)

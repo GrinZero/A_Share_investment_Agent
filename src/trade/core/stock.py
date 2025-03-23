@@ -226,6 +226,7 @@ def get_stock_list(context:Context):
     index_stock_list = list(
         set(index_stock_df.index)
     )
+    index_stock_list.sort()
     
     initial_list = filter_stocks(context, index_stock_list)
     

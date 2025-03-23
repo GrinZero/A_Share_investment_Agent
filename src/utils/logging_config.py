@@ -2,7 +2,7 @@ import os
 import time
 import logging
 from typing import Optional
-from src.core.recorder import add_order_record
+from src.core.recorder import add_log_record
 
 class ListHandler(logging.Handler):
     def __init__(self):
@@ -10,7 +10,7 @@ class ListHandler(logging.Handler):
 
     def emit(self, record):
         log_entry = self.format(record)
-        add_order_record(log_entry)
+        add_log_record(log_entry)
 
 def setup_logger(name: str, log_dir: Optional[str] = None) -> logging.Logger:
     """设置统一的日志配置

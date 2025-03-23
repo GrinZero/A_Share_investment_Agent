@@ -71,7 +71,7 @@ def order_target_value(context: Context, stock:Position | str, target_value):
                 'amount': trade_shares * price,
                 'fee': trade_shares * price * 0.001,
                 'type': trade_type,
-                'date': context.current_dt
+                'date': context.current_dt.timestamp()
             })
             
             # 更新 Position 对象
