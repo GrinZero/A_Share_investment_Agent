@@ -143,6 +143,7 @@ if __name__ == "__main__":
     from src.trade.trade_afternoon import trade_afternoon
     from src.trade.sell_stocks import sell_stocks
     from src.trade.weekly_adjustment import weekly_adjustment
+    from src.trade.print_position_info import print_position_info
     from src.trade.config import g
     
     g['in_history'] = True
@@ -151,4 +152,5 @@ if __name__ == "__main__":
     run_daily(sell_stocks, time='10:00') # 止损函数
     run_daily(close_account, '14:50')
     run_weekly(weekly_adjustment,2,'10:00')
+    run_daily(print_position_info, '15:15')
     run_scheduler(test_mode=True, start_time=datetime(2025, 3, 18), end_time=datetime(2025, 3, 22))

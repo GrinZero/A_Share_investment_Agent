@@ -7,4 +7,4 @@ def fmtDate(date):
 def fmtDateTime(date):
     return date.strftime('%Y-%m-%d %H:%M:%S')
 
-logger = setup_logger('ChooseStock', record_list=record['log_record'])
+logger = setup_logger('-', record_list=record['log_record'])

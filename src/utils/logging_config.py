@@ -40,7 +40,7 @@ def setup_logger(name: str, log_dir: Optional[str] = None, record_list: Optional
 
     # 创建格式化器
     formatter = logging.Formatter(
-        '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        '%(asctime)s | %(name)s | %(levelname)s | %(message)s',
         datefmt='%Y-%m-%d %H:%M:%S'
     )
     console_handler.setFormatter(formatter)
