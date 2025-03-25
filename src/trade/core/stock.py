@@ -68,41 +68,6 @@ def is_limit(stock_data):
     
     return is_up_limit, is_down_limit
 
-stock_info_a_sh_code_name_df = None
-def get_market_code(stock_name, stock_code, variant='start'):
-    """
-    根据股票代码和名称判断所属市场
-    :param stock_code: 股票代码
-    :param name: 股票名称
-    :param variant: 匹配方式，'start'，如 SZ000001，'end' 如 000001.SZ
-    :return: 所属市场代码
-    :return: SZ000001
-    """
-    global stock_info_a_sh_code_name_df
-    
-    if stock_code.startswith('9') or stock_code.startswith('8') or stock_code.startswith('4'):
-        if variant == 'start':
-            return "BJ" + stock_code
-        else:
-            return stock_code + ".BJ"
-    
-    if stock_info_a_sh_code_name_df is None:
-        stock_info_a_sh_code_name_df = ak.stock_info_sh_name_code()
-        stock_info_a_sh_code_name_df.set_index('证券简称', inplace=True)
-        
-    if stock_name in stock_info_a_sh_code_name_df.index:
-        market_code = stock_info_a_sh_code_name_df.loc[stock_name, '证券代码']
-        if variant =='start':
-            return "SH" + market_code
-        else:
-            return market_code + ".SH"
-    else:
-        if variant =='start':
-            return "SZ" + stock_code
-        else:
-            return stock_code + ".SZ"
-    
-
 def get_market_code_by_code(code, variant='start', style='upper'):
     """
     根据股票代码判断所属市场
@@ -131,6 +96,16 @@ def get_market_code_by_code(code, variant='start', style='upper'):
     else:
         return code + "." + fix
 
+def get_market_code(stock_name, stock_code, variant='start'):
+    """
+    根据股票代码和名称判断所属市场
+    :param stock_code: 股票代码
+    :param name: 股票名称
+    :param variant: 匹配方式，'start'，如 SZ000001，'end' 如 000001.SZ
+    :return: 所属市场代码
+    :return: SZ000001
+    """
+    return get_market_code_by_code(code=stock_code, variant=variant)
 
 
 #2 过滤各种股票
