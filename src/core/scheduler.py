@@ -144,11 +144,11 @@ if __name__ == "__main__":
     from src.trade.print_position_info import print_position_info
     from src.trade.config import g
     
-    g['in_history'] = True
+    # g['in_history'] = True
     run_daily(prepare_stock_list, '9:05')
     run_daily(trade_afternoon, time='14:00') #检查持仓中的涨停股是否需要卖出
     run_daily(sell_stocks, time='10:00') # 止损函数
     run_daily(close_account, '14:50')
     run_weekly(weekly_adjustment,2,'10:00')
     run_daily(print_position_info, '15:15')
-    run_scheduler(test_mode=True, start_time=datetime(2025, 3, 18), end_time=datetime(2025, 3, 22))
+    run_scheduler(test_mode=True, start_time=datetime(2025, 3, 25), end_time=datetime(2025, 3, 26))

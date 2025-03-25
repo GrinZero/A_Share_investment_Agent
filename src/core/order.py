@@ -24,6 +24,8 @@ def order_target_value(context: Context, stock:Position | str, target_value):
     try:
         db = mongo_client['investment_agent']
         
+        trade_type = 'buy' if target_value - stock.value > 0 else 'sell'
+        
         # 获取当前价格
         if g['in_history']:
             ad = ak.stock_zh_a_minute(
@@ -37,7 +39,20 @@ def order_target_value(context: Context, stock:Position | str, target_value):
             price = float(ad.loc[day]['close'])
         else:
             ad = ak.stock_bid_ask_em(symbol=stock.security)
-            price = float(ad['value'][8])  # 默认使用买入价
+            print('获取股票价格', ad)
+            try:
+                buy_price = float(ad['value'][8])  
+                sell_price = float(ad['value'][10])
+                price = buy_price if trade_type == 'buy' else sell_price
+                high_limit = float(ad['value'][32])  # 最高价
+                low_limit = float(ad['value'][33])   # 最低价
+                if price >= high_limit or price <= low_limit:
+                    logger.info(f"股票代码: {stock.security}, 当前价格: {price}, 目标价值: {target_value}")
+                    logger.info(f"价格超过涨跌停，无法下单")
+                    return
+            except Exception as e:
+                logger.info("价格解析失败，无法下单")
+                return
         
         # 计算目标股数（向下取整到100的倍数）
         multiplier = 100  # 股票的乘数为100
@@ -49,7 +64,6 @@ def order_target_value(context: Context, stock:Position | str, target_value):
         # 计算交易数量和方向
         current_shares = stock.total_amount
         trade_shares = target_shares - current_shares
-        trade_type = 'buy' if trade_shares > 0 else 'sell'
         trade_shares = abs(trade_shares)
         
         logger.info(f"股票代码: {stock.security}, 当前价格: {price}, 目标价值: {target_value}")
