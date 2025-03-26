@@ -128,7 +128,9 @@ def filter_stocks(context:Context, stock_list):
             continue
         if stock.startswith('30') or stock.startswith('68') or stock.startswith('8') or stock.startswith('4'):  # 市场类型
             continue
-        if not (stock in context.portfolio.positions or any(is_limit(stock_data))):  # 涨停跌停
+        if not (stock in context.portfolio.positions):  # 涨停跌停
+            continue
+        if any(is_limit(stock_data)):
             continue
         # 次新股过滤
         astock_info_data = ak.stock_individual_info_em(symbol=stock)
@@ -202,7 +204,6 @@ def get_stock_list(context:Context):
         set(index_stock_df.index)
     )
     index_stock_list.sort()
-    
     initial_list = filter_stocks(context, index_stock_list)
     
     # 国九更新：过滤近一年净利润为负且营业收入小于1亿的

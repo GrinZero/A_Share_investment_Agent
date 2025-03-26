@@ -149,6 +149,6 @@ if __name__ == "__main__":
     run_daily(trade_afternoon, time='14:00') #检查持仓中的涨停股是否需要卖出
     run_daily(sell_stocks, time='10:00') # 止损函数
     run_daily(close_account, '14:50')
-    run_weekly(weekly_adjustment,2,'10:00')
+    run_weekly(weekly_adjustment,3,'10:00')
     run_daily(print_position_info, '15:15')
-    run_scheduler(test_mode=True, start_time=datetime(2025, 3, 25), end_time=datetime(2025, 3, 26))
+    run_scheduler(test_mode=True, start_time=datetime(2025, 3, 26), end_time=datetime(2025, 3, 27))
