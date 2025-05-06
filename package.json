@@ -7,7 +7,8 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "n8n start",
     "prod": "n8n start --tunnel",
-    "choose-stock":"poetry run python ./src/choose-stock.py"
+    "choose-stock":"poetry run python ./src/choose-stock.py",
+    "py:install":"poetry install"
   },
   "keywords": [],
   "author": "",

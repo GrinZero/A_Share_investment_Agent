@@ -10,4 +10,4 @@ def close_account(context:Context):
                 position = context.portfolio.get_position(stock)
                 if position != None:
                     order_target_value(context,position, 0)
-                    log.info("卖出[%s]" % (stock))
+                    logger.info("卖出[%s]" % (stock))

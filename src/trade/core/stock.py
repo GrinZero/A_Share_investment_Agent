@@ -7,6 +7,8 @@ from src.utils.covert import convert_chinese_number
 from .audit import filter_audit
 from src.core.utils import logger
 
+
+
 def is_paused(stock_data):
     """判断股票是否停牌
     Args:
@@ -128,38 +130,117 @@ def filter_stocks(context:Context, stock_list):
             continue
         if stock.startswith('30') or stock.startswith('68') or stock.startswith('8') or stock.startswith('4'):  # 市场类型
             continue
-        if not (stock in context.portfolio.positions):  # 涨停跌停
+        if not (stock in context.portfolio.positions) and any(is_limit(stock_data)):  # 涨停跌停
             continue
-        if any(is_limit(stock_data)):
+
+        stock_mv = stock_data['总市值']
+        total_mv = (float(stock_mv) / 1e8)
+        if not (g['min_mv'] <= total_mv <= g['max_mv']):
             continue
-        # 次新股过滤
-        astock_info_data = ak.stock_individual_info_em(symbol=stock)
-        astock_info_data.set_index('item', inplace=True)
-        start_date_str = str(astock_info_data.loc['上市时间'].value)
-        start_date = datetime.strptime(start_date_str, '%Y%m%d')  # 将字符串转换为datetime对象
-        if context.previous_date - start_date < timedelta(days=375):
-            continue
-        filtered_stocks.append(stock)
         
-    return filtered_stocks
+        # 次新股过滤
+        # astock_info_data = ak.stock_individual_info_em(symbol=stock)
+        # astock_info_data.set_index('item', inplace=True)
+        # start_date_str = str(astock_info_data.loc['上市时间'].value)
+        # start_date = datetime.strptime(start_date_str, '%Y%m%d')  # 将字符串转换为datetime对象
+        # if context.previous_date - start_date < timedelta(days=375):
+        #     continue
+        filtered_stocks.append((stock,total_mv))
+
+    sorted_stocks = sorted(filtered_stocks, key=lambda x: x[1])
+        
+    return [stock[0] for stock in sorted_stocks]
+
+
+def filter_wencai(context:Context):
+    import json
+    import requests
+    from .wencai import get_conditions
+    from urllib.parse import urlencode
+
+    url = "https://www.iwencai.com/gateway/urp/v7/landing/getDataList"
+
+    condition = get_conditions()
+    condition_str = json.dumps(condition, ensure_ascii=False)
+
+    sort_key = "总市值[" + str(datetime.now().strftime('%Y%m%d')) + "]"
+
+    form = {
+        # "query": "总市值大于等于10亿元,归属于母公司股东的综合收益总额大于零,净利润大于零,roe大于零,roa大于零,营业总收入大于1亿,主板股票,非 ST,非新股与次新股,未涨停,未跌停,中小综指股票,未停牌,近三年审计意见只包含标准无保留意见,股价不超过50",
+        "urp_sort_way": "asc",
+        "urp_sort_index": sort_key,
+        "page": 1,
+        "perpage": 100,
+        # "addheaderindexes": "",
+        "condition": condition_str,
+        # "codelist": "",
+        # "indexnamelimit": "",
+        "logid": "c13d2ba6bf45e44a7b57f709726189f6",
+        "ret": "json_all",
+        "sessionid": "c13d2ba6bf45e44a7b57f709726189f6",
+        "source": "Ths_iwencai_Xuangu",
+        # "date_range[0]": 20221231,
+        # "date_range[1]": 20250506,
+        # "iwc_token": "0ac9ebeb17465382910985970",
+        "urp_use_sort": 1,
+        # "user_id": 513617837,
+        # "uuids[0]": 24087,
+        "query_type": "stock",
+        "comp_id": 6836372,
+        "business_cat": "soniu",
+        "uuid": 24087
+    }
+
+    data = urlencode(form)
+
+    headers = {
+        "accept": "application/json, text/plain, */*",
+        "accept-language": "zh-CN,zh;q=0.9,ja;q=0.8,en;q=0.7",
+        "cache-control": "no-cache",
+        "content-type": "application/x-www-form-urlencoded",
+        # "hexin-v": "A6n3hMEY5dABMtlkwNvZ6Hpmvl4BdrXGB3fK0kq8IU7OG8eAk8ateJe60cnY",
+        "pragma": "no-cache",
+        "sec-ch-ua": '"Not(A:Brand";v="99", "Google Chrome";v="133", "Chromium";v="133"',
+        "sec-ch-ua-mobile": "?0",
+        "sec-ch-ua-platform": '"macOS"',
+        "sec-fetch-dest": "empty",
+        "sec-fetch-mode": "cors",
+        "sec-fetch-site": "same-origin",
+        "cookie": "cid=94deb62674692cb0adea032b308010251742012109; other_uid=Ths_iwencai_Xuangu_kksyr6d5gidi38zt64jqzoh1cymjhb70; ta_random_userid=0e1hebfxrk; u_ukey=A10702B8689642C6BE607730E11E6E4A; u_uver=1.0.0; u_dpass=VDCmGgaj3Kvm%2BGEIKSPpy8GgLdea1pXgyV5gcwqMa3MUlAuju3jjxZFDZJeM9m7%2FHi80LrSsTFH9a%2B6rtRvqGg%3D%3D; u_did=057F2207A97A4DBA9A97AA8AAFABAF54; u_ttype=WEB; user=MDrUtNDEy%2Fg6Ok5vbmU6NTAwOjUyMzYxNzgzNzo3LDExMTExMTExMTExLDQwOzQ0LDExLDQwOzYsMSw0MDs1LDEsNDA7MSwxMDEsNDA7MiwxLDQwOzMsMSw0MDs1LDEsNDA7OCwwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMSw0MDsxMDIsMSw0MDoyNDo6OjUxMzYxNzgzNzoxNzQ2NTMwNTc0Ojo6MTU4MzU4MzM2MDoyNjc4NDAwOjA6MTllOGE5M2VjN2QxYjU0YTQyOTc2NjU2OGJjZmQ0ZjBhOmRlZmF1bHRfNDox; userid=513617837; u_name=%D4%B4%D0%C4%CB%F8; escapename=%25u6e90%25u5fc3%25u9501; ticket=4a2c2267fc758a223cb74c019201ca64; user_status=0; utk=06b32c65d662059c0f51d184eb0572ca;",
+        "Referer": "https://www.iwencai.com/unifiedwap/result",
+        "Referrer-Policy": "strict-origin-when-cross-origin",
+        "user-agent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36"
+    }
+
+    response = requests.post(url, headers=headers, data=data).json()
+    print('response', json.dumps(response, ensure_ascii=False))
+    datas = response['answer']['components'][0]['data']['datas']
+    codes = map(lambda x: x['code'], datas)
+    return list(codes)
+
+
+def filter_wencai_api(context:Context):
+    import pywencai
+    try:
+        cookie = 'cid=94deb62674692cb0adea032b308010251742012109; other_uid=Ths_iwencai_Xuangu_kksyr6d5gidi38zt64jqzoh1cymjhb70; ta_random_userid=0e1hebfxrk; u_ukey=A10702B8689642C6BE607730E11E6E4A; u_uver=1.0.0; u_dpass=VDCmGgaj3Kvm%2BGEIKSPpy8GgLdea1pXgyV5gcwqMa3MUlAuju3jjxZFDZJeM9m7%2FHi80LrSsTFH9a%2B6rtRvqGg%3D%3D; u_did=057F2207A97A4DBA9A97AA8AAFABAF54; u_ttype=WEB; user=MDrUtNDEy%2Fg6Ok5vbmU6NTAwOjUyMzYxNzgzNzo3LDExMTExMTExMTExLDQwOzQ0LDExLDQwOzYsMSw0MDs1LDEsNDA7MSwxMDEsNDA7MiwxLDQwOzMsMSw0MDs1LDEsNDA7OCwwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMSw0MDsxMDIsMSw0MDoyNDo6OjUxMzYxNzgzNzoxNzQ2NTMwNTc0Ojo6MTU4MzU4MzM2MDoyNjc4NDAwOjA6MTllOGE5M2VjN2QxYjU0YTQyOTc2NjU2OGJjZmQ0ZjBhOmRlZmF1bHRfNDox; userid=513617837; u_name=%D4%B4%D0%C4%CB%F8; escapename=%25u6e90%25u5fc3%25u9501; ticket=4a2c2267fc758a223cb74c019201ca64; user_status=0; utk=06b32c65d662059c0f51d184eb0572ca; v=AzNt5v-mX8BUrRMU_C0zKjywxDxYaMcTgfwLReXQj9KJ5F0ibThXepHMm7X2'
+        query = "总市值大于等于10亿元,归属于母公司股东的综合收益总额大于零,净利润大于零,roe大于零,roa大于零,营业总收入大于1亿,主板股票,非 ST,非新股与次新股,未涨停,未跌停,中小综指股票,未停牌,近三年审计意见只包含标准无保留意见,股价不超过50"
+
+        sort_key = "总市值[" + str(context.current_dt.strftime('%Y%m%d')) + "]"
+        res = pywencai.get(query=query,page=1,perpage=100, sort_key=sort_key, sort_order='asc', cookie=cookie)
+        return list(res['code'])
+    except Exception as e:
+        logger.info(f"获取问财数据失败: {str(e)}")
+        return []
+
 
 def query_market_codes(context:Context, initial_list):
     now = context.current_dt
     filtered_stocks = []
     logger.info('批量筛选股票财务数据中，该过程耗时可能长')
+    # print('len(initial_list)', len(initial_list))
+    # filter_wencai(context)
     for stock in initial_list:
         try:
-            # 获取财务指标
-            stock_info = ak.stock_individual_info_em(symbol=stock)
-            stock_info.set_index('item', inplace=True)
-            
-            # 获取市值数据
-            stock_mv = stock_info.loc['总市值']
-            total_mv = (float(stock_mv.iloc[0]) / 1e8)
-            # 检查市值范围
-            if not (g['min_mv'] <= total_mv <= g['max_mv']):
-                continue
-            
             financial_data = ak.stock_financial_benefit_ths(symbol=stock, indicator="按报告期")
             # 获取最新一期财务数据
             np_parent_company_owners = convert_chinese_number(financial_data['归属于母公司股东的综合收益总额'].values[0])  # 归属于母公司股东的综合收益总额
@@ -179,7 +260,7 @@ def query_market_codes(context:Context, initial_list):
                 np_parent_company_owners > 0 and
                 roe > 0 and 
                 roa > 0):
-                filtered_stocks.append((stock,total_mv))
+                filtered_stocks.append(stock)
                 
             if len(filtered_stocks) >= g['stock_num'] * g['stock_pool_mult']:
                 break
@@ -188,14 +269,18 @@ def query_market_codes(context:Context, initial_list):
             logger.info(f"处理股票 {stock} 时出错: {str(e)}")
             continue
     
-    sorted_stocks = sorted(filtered_stocks, key=lambda x: x[1])
-    # 按照 total_mv 正排
-    return [stock[0] for stock in sorted_stocks]
+    return filtered_stocks
     
 
 
 #1-2 选股模块
 def get_stock_list(context:Context):
+    stock_list = filter_wencai_api(context)
+    if len(stock_list) != 0:
+        current_data = ak.stock_zh_a_spot_em()
+        current_data.set_index('代码', inplace=True)
+        return [stock for stock in stock_list if stock in g['hold_list'] or current_data.loc[stock, '最新价'] <= g['highest']]
+
     final_list = []
     MKT_index = '399101'
     index_stock_df = ak.index_stock_cons(symbol=MKT_index)
@@ -233,10 +318,15 @@ def get_stock_list(context:Context):
         
     if len(final_list) == 0:
         # 由于有时候选股条件苛刻，所以会没有股票入选，这时买入银华日利ETF
-        log.info('无适合股票，买入ETF')
+        logger.info('无适合股票，买入ETF')
         return [g['etf']]
     else:
         # 注意买的时候要确保购买价格 last_prices <= g['highest']
         current_data = ak.stock_zh_a_spot_em()
         current_data.set_index('代码', inplace=True)
         return [stock for stock in final_list if stock in g['hold_list'] or current_data.loc[stock, '最新价'] <= g['highest']]
+
+if __name__ == "__main__":
+    context = Context()
+    wencai = filter_wencai_api(context)
+    print(wencai)

@@ -9,7 +9,7 @@ g = {
     'hold_list': [],
     'yesterday_HL_list': [],
     'target_list': [],
-    'pass_months': [1,4],
+    'pass_months': [1],
     'limitup_stocks': [],
     'Expected_bonus': [5],
     'min_mv': 10,

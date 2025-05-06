@@ -107,17 +107,16 @@ def run_scheduler(test_mode=False, start_time=None, end_time=None):
                 
                 # 等待所有任务完成后再进入下一分钟
                 if futures:
+                    send_record()
                     wait(futures)
+                    reset_record()
                 
                 # 处理队列中的记录并发送
-                process_record_queue()  # 确保处理所有队列中的记录
-                send_record()
-                
+
                 if not test_mode:
                     # 等待到下一分钟
                     time.sleep(60 - current_time.second)
                 
-                reset_record()
                     
             except Exception as e:
                 logger.info(f"调度器运行出错: {str(e)}")
@@ -136,19 +135,20 @@ def run_scheduler(test_mode=False, start_time=None, end_time=None):
         executor.shutdown(wait=True)  # 确保所有任务都完成后关闭线程池
 
 if __name__ == "__main__":
-    from src.trade.close_account import close_account
-    from src.trade.prepare_stock_list import prepare_stock_list
-    from src.trade.trade_afternoon import trade_afternoon
-    from src.trade.sell_stocks import sell_stocks
-    from src.trade.weekly_adjustment import weekly_adjustment
+    # from src.trade.close_account import close_account
+    # from src.trade.prepare_stock_list import prepare_stock_list
+    # from src.trade.trade_afternoon import trade_afternoon
+    # from src.trade.sell_stocks import sell_stocks
+    # from src.trade.weekly_adjustment import weekly_adjustment
     from src.trade.print_position_info import print_position_info
-    from src.trade.config import g
+    # from src.trade.config import g
     
-    # g['in_history'] = True
-    run_daily(prepare_stock_list, '9:05')
-    run_daily(trade_afternoon, time='14:00') #检查持仓中的涨停股是否需要卖出
-    run_daily(sell_stocks, time='10:00') # 止损函数
-    run_daily(close_account, '14:50')
-    run_weekly(weekly_adjustment,3,'10:00')
-    run_daily(print_position_info, '15:15')
-    run_scheduler(test_mode=True, start_time=datetime(2025, 3, 26), end_time=datetime(2025, 3, 27))
+    # # g['in_history'] = True
+    # run_daily(prepare_stock_list, '9:05')
+    # run_daily(trade_afternoon, time='14:00') #检查持仓中的涨停股是否需要卖出
+    # run_daily(sell_stocks, time='10:00') # 止损函数
+    # run_daily(close_account, '14:50')
+    # run_weekly(weekly_adjustment,3,'9:45')
+    run_daily(print_position_info, '09:50')
+
+    run_scheduler(test_mode=True, start_time=datetime(2025, 4, 29), end_time=datetime(2025, 5, 5))

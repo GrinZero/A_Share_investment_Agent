@@ -57,7 +57,7 @@ def check_remain_amount(context:Context):
             # 计算需要买入的股票数量
             num_stocks_to_buy = min(len(g['limitup_stocks']), g['stock_num'] - len(context.portfolio.positions))
             target_list = [stock for stock in g['target_list'] if stock not in g['limitup_stocks']][:num_stocks_to_buy]
-            log.info('有余额可用'+str(round((context.portfolio.cash),2))+'元。买入'+ str(target_list))
+            logger.info('有余额可用'+str(round((context.portfolio.cash),2))+'元。买入'+ str(target_list))
             buy_security(context,target_list)
         g['reason_to_sell'] = ''
     elif g['reason_to_sell'] == 'stoploss':
