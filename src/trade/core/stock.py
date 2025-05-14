@@ -221,16 +221,22 @@ def filter_wencai(context:Context):
 
 def filter_wencai_api(context:Context):
     import pywencai
-    try:
-        cookie = 'cid=94deb62674692cb0adea032b308010251742012109; other_uid=Ths_iwencai_Xuangu_kksyr6d5gidi38zt64jqzoh1cymjhb70; ta_random_userid=0e1hebfxrk; u_ukey=A10702B8689642C6BE607730E11E6E4A; u_uver=1.0.0; u_dpass=VDCmGgaj3Kvm%2BGEIKSPpy8GgLdea1pXgyV5gcwqMa3MUlAuju3jjxZFDZJeM9m7%2FHi80LrSsTFH9a%2B6rtRvqGg%3D%3D; u_did=057F2207A97A4DBA9A97AA8AAFABAF54; u_ttype=WEB; user=MDrUtNDEy%2Fg6Ok5vbmU6NTAwOjUyMzYxNzgzNzo3LDExMTExMTExMTExLDQwOzQ0LDExLDQwOzYsMSw0MDs1LDEsNDA7MSwxMDEsNDA7MiwxLDQwOzMsMSw0MDs1LDEsNDA7OCwwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMSw0MDsxMDIsMSw0MDoyNDo6OjUxMzYxNzgzNzoxNzQ2NTMwNTc0Ojo6MTU4MzU4MzM2MDoyNjc4NDAwOjA6MTllOGE5M2VjN2QxYjU0YTQyOTc2NjU2OGJjZmQ0ZjBhOmRlZmF1bHRfNDox; userid=513617837; u_name=%D4%B4%D0%C4%CB%F8; escapename=%25u6e90%25u5fc3%25u9501; ticket=4a2c2267fc758a223cb74c019201ca64; user_status=0; utk=06b32c65d662059c0f51d184eb0572ca; v=AzNt5v-mX8BUrRMU_C0zKjywxDxYaMcTgfwLReXQj9KJ5F0ibThXepHMm7X2'
-        query = "总市值大于等于10亿元,归属于母公司股东的综合收益总额大于零,净利润大于零,roe大于零,roa大于零,营业总收入大于1亿,主板股票,非 ST,非新股与次新股,未涨停,未跌停,中小综指股票,未停牌,近三年审计意见只包含标准无保留意见,股价不超过50"
+    max_retries = 3
+    retry_count = 0
 
-        sort_key = "总市值[" + str(context.current_dt.strftime('%Y%m%d')) + "]"
-        res = pywencai.get(query=query,page=1,perpage=100, sort_key=sort_key, sort_order='asc', cookie=cookie)
-        return list(res['code'])
-    except Exception as e:
-        logger.info(f"获取问财数据失败: {str(e)}")
-        return []
+    while retry_count < max_retries:
+        try:
+            cookie = 'cid=94deb62674692cb0adea032b308010251742012109; other_uid=Ths_iwencai_Xuangu_kksyr6d5gidi38zt64jqzoh1cymjhb70; ta_random_userid=0e1hebfxrk; u_ukey=A10702B8689642C6BE607730E11E6E4A; u_uver=1.0.0; u_dpass=VDCmGgaj3Kvm%2BGEIKSPpy8GgLdea1pXgyV5gcwqMa3MUlAuju3jjxZFDZJeM9m7%2FHi80LrSsTFH9a%2B6rtRvqGg%3D%3D; u_did=057F2207A97A4DBA9A97AA8AAFABAF54; u_ttype=WEB; user=MDrUtNDEy%2Fg6Ok5vbmU6NTAwOjUyMzYxNzgzNzo3LDExMTExMTExMTExLDQwOzQ0LDExLDQwOzYsMSw0MDs1LDEsNDA7MSwxMDEsNDA7MiwxLDQwOzMsMSw0MDs1LDEsNDA7OCwwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMSw0MDsxMDIsMSw0MDoyNDo6OjUxMzYxNzgzNzoxNzQ2NTMwNTc0Ojo6MTU4MzU4MzM2MDoyNjc4NDAwOjA6MTllOGE5M2VjN2QxYjU0YTQyOTc2NjU2OGJjZmQ0ZjBhOmRlZmF1bHRfNDox; userid=513617837; u_name=%D4%B4%D0%C4%CB%F8; escapename=%25u6e90%25u5fc3%25u9501; ticket=4a2c2267fc758a223cb74c019201ca64; user_status=0; utk=06b32c65d662059c0f51d184eb0572ca; v=AzNt5v-mX8BUrRMU_C0zKjywxDxYaMcTgfwLReXQj9KJ5F0ibThXepHMm7X2'
+            query = "总市值大于等于10亿元,归属于母公司股东的综合收益总额大于零,净利润大于零,roe大于零,roa大于零,营业总收入大于1亿,主板股票,非 ST,非新股与次新股,未涨停,未跌停,中小综指股票,未停牌,近三年审计意见只包含标准无保留意见,股价不超过50"
+
+            sort_key = "总市值[" + str(context.current_dt.strftime('%Y%m%d')) + "]"
+            res = pywencai.get(query=query,page=1,perpage=100, sort_key=sort_key, sort_order='asc', cookie=cookie)
+            return list(res['code'])
+        except Exception as e:
+            retry_count += 1
+            if retry_count < max_retries:
+                logger.info(f"获取问财数据失败: {str(e)}")
+                return []
 
 
 def query_market_codes(context:Context, initial_list):
@@ -329,4 +335,5 @@ def get_stock_list(context:Context):
 if __name__ == "__main__":
     context = Context()
     wencai = filter_wencai_api(context)
+    logger.info("问财数据 %s", wencai)
     print(wencai)

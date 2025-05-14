@@ -35,23 +35,29 @@ def sell_stocks(context:Context):
     if g['run_stoploss']:
         current_positions = context.portfolio.positions
         if g['stoploss_strategy'] == 1 or g['stoploss_strategy'] == 3:
+            logger.info('Sell 策略开始运行')         
             for stock in current_positions.keys():
                 position = context.portfolio.get_position(stock)
                 if not position:
+                    logger.info(f'Sell 策略 - 股票: {stock}, 未在仓位中找到')
                     continue
+                logger.info(f'Sell 策略 - 股票: {stock} 当前价格: {position.price} 成本: {position.avg_cost}')
                 price = position.price
                 avg_cost = position.avg_cost
                 # 个股盈利止盈
                 if price >= avg_cost * 2:
+                    logger.info(f'Sell 策略 - 股票止盈: {stock} 盈利止盈')
                     order_target_value(context,position, 0)
                 # 个股止损
                 elif price < avg_cost * (1 - g['stoploss_limit']):
+                    logger.info(f'Sell 策略 - 股票止损: {stock} 止损止损')
                     order_target_value(context,position, 0)
                     g['reason_to_sell'] = 'stoploss'
                     
         if g['stoploss_strategy'] == 2 or g['stoploss_strategy'] == 3:
             down_ratio = get_down_ratio(context=context)
             # 市场大跌止损
+            logger.info(f'Sell 策略 - 市场大跌止损: {down_ratio} 止损比例: {g["stoploss_market"]}')
             if down_ratio >= g['stoploss_market']:
                 g['reason_to_sell'] = 'stoploss'
                 for stock in current_positions.keys():

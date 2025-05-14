@@ -9,7 +9,7 @@ def get_portfolio_sync(user_id: str):
         return None
         
     # 获取持仓记录
-    positions = list(db.positions.find({'portfolio_id': portfolio['_id']}))
+    positions = list(db.positions.find({'user_id': user_id}))
     portfolio['positions'] = positions
         
     return portfolio

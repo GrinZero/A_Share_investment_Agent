@@ -1,6 +1,7 @@
 import os
 from dotenv import load_dotenv
 import queue
+import threading
 import json
 import requests
 from datetime import datetime
@@ -17,6 +18,9 @@ webhook_url = os.getenv('N8N_WEBHOOK_URL', '')
 
 # 使用线程安全的队列存储记录
 record_queue = queue.Queue()
+
+# 线程锁，用于同步对 current_record 的访问
+record_lock = threading.Lock()
 
 # 当前批次的记录
 current_record = {
@@ -40,10 +44,11 @@ def process_record_queue():
     while not record_queue.empty():
         try:
             record_type, data = record_queue.get_nowait()
-            if record_type == "order":
-                current_record["order_record"].append(data)
-            elif record_type == "log":
-                current_record["log_record"].append(data)
+            with record_lock:
+                if record_type == "order":
+                    current_record["order_record"].append(data)
+                elif record_type == "log":
+                    current_record["log_record"].append(data)
             record_queue.task_done()
         except queue.Empty:
             break
@@ -55,24 +60,24 @@ def send_record():
     # 先处理队列中的所有记录
     process_record_queue()
 
-    # 复制当前记录用于发送
-    record_to_send = {
-        "order_record": current_record["order_record"].copy(),
-        "log_record": current_record["log_record"].copy(),
-        "timestamp": datetime.now().isoformat()
-    }
+    with record_lock:
+        # 复制当前记录用于发送
+        record_to_send = {
+            "order_record": current_record["order_record"].copy(),
+            "log_record": current_record["log_record"].copy(),
+            "timestamp": datetime.now().isoformat()
+        }
 
-    # 发送记录
-    if webhook_url:
-        try:
-            headers = {'Content-Type': 'application/json'}
-            data = json.dumps(record_to_send)
-            response = requests.post(webhook_url, headers=headers, data=data)
-            if response.status_code != 200:
-                print(f"发送记录失败: {response.status_code} {response.text}")
-        except Exception as e:
-            print(f"发送记录异常: {str(e)}")
-
+        # 发送记录
+        if webhook_url:
+            try:
+                headers = {'Content-Type': 'application/json'}
+                data = json.dumps(record_to_send)
+                response = requests.post(webhook_url, headers=headers, data=data)
+                if response.status_code != 200:
+                    print(f"发送记录失败: {response.status_code} {response.text}")
+            except Exception as e:
+                print(f"发送记录异常: {str(e)}")
     return record_to_send
 
 def reset_record():
@@ -80,9 +85,10 @@ def reset_record():
     global current_record
 
     # 重置当前记录
-    current_record = {
-        "order_record": [],
-        "log_record": []
-    }
+    with record_lock:
+        current_record = {
+            "order_record": [],
+            "log_record": []
+        }
 
     return current_record

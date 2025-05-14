@@ -10,6 +10,7 @@ def check_limit_up(context:Context):
     检查当天涨停情况
     """
     now_time = context.current_dt
+    logger.info("检查涨停情况: %s",g['yesterday_HL_list'])
     if g['yesterday_HL_list'] != []:
         for stock in g['yesterday_HL_list']:
             # stock_zh_a_minute ｜ stock_zh_a_hist_min_em
@@ -48,6 +49,7 @@ def check_remain_amount(context:Context):
     """
     检查当天剩余资金是否足够
     """
+    logger.info("检查剩余资金: %s",g['reason_to_sell'])
     if g['reason_to_sell'] == 'limitup':
         g['hold_list'] = []
         for position in list(context.portfolio.positions.values()):
@@ -66,6 +68,8 @@ def check_remain_amount(context:Context):
         g['reason_to_sell'] = ''
         
 def trade_afternoon(context:Context):
+    logger.info('下午交易开始')
     if g['trading_signal'] == True:
+        logger.info('下午交易信号为 True, 检查是否需要存在涨停股以及存量资金')
         check_limit_up(context)
         check_remain_amount(context)

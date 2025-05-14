@@ -12,6 +12,10 @@ tasks = []  # [(task, time_str, type, day), ...]
 # 创建线程池
 executor = ThreadPoolExecutor(max_workers=5)
 
+def run_once(fn: callable):
+    """每次启动运行"""
+    tasks.append((fn, '9:00', "once", None))
+
 def run_daily(fn: callable, time: str):
     """每天运行"""
     tasks.append((fn, time, "daily", None))
@@ -51,6 +55,16 @@ def is_trading_day(date):
 
 def run_scheduler(test_mode=False, start_time=None, end_time=None):
     try:
+        context = Context(current_dt=start_time if test_mode else datetime.now())
+        for task, time_str, task_type, day in tasks:
+            if task_type == "once":
+                logger.info(f"首次启动执行任务: {task.__name__}, 类型: {task_type}")
+                try:
+                    task(context)
+                except Exception as e:
+                    logger.error(f"执行 {task.__name__} 任务出错: {str(e)}")
+
+
         while True:
             try:
                 if test_mode:
@@ -107,8 +121,8 @@ def run_scheduler(test_mode=False, start_time=None, end_time=None):
                 
                 # 等待所有任务完成后再进入下一分钟
                 if futures:
-                    send_record()
                     wait(futures)
+                    send_record()
                     reset_record()
                 
                 # 处理队列中的记录并发送
@@ -136,19 +150,19 @@ def run_scheduler(test_mode=False, start_time=None, end_time=None):
 
 if __name__ == "__main__":
     # from src.trade.close_account import close_account
-    # from src.trade.prepare_stock_list import prepare_stock_list
+    from src.trade.prepare_stock_list import prepare_stock_list
     # from src.trade.trade_afternoon import trade_afternoon
     # from src.trade.sell_stocks import sell_stocks
-    # from src.trade.weekly_adjustment import weekly_adjustment
-    from src.trade.print_position_info import print_position_info
+    from src.trade.weekly_adjustment import weekly_adjustment
+    # from src.trade.print_position_info import print_position_info
     # from src.trade.config import g
     
     # # g['in_history'] = True
-    # run_daily(prepare_stock_list, '9:05')
+    run_daily(prepare_stock_list, '10:00')
+    run_daily(weekly_adjustment, '10:00')
     # run_daily(trade_afternoon, time='14:00') #检查持仓中的涨停股是否需要卖出
     # run_daily(sell_stocks, time='10:00') # 止损函数
     # run_daily(close_account, '14:50')
     # run_weekly(weekly_adjustment,3,'9:45')
-    run_daily(print_position_info, '09:50')
 
     run_scheduler(test_mode=True, start_time=datetime(2025, 4, 29), end_time=datetime(2025, 5, 5))

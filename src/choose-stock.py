@@ -14,16 +14,17 @@ from trade.weekly_adjustment import weekly_adjustment
 from trade.close_account import close_account
 from trade.prepare_stock_list import prepare_stock_list
 from trade.sell_stocks import sell_stocks
-from src.core.scheduler import run_scheduler,run_daily,run_weekly
+from src.core.scheduler import run_scheduler,run_daily,run_weekly,run_once
 from core.utils import fmtDate
 import os
 from dotenv import load_dotenv
 
 if __name__ == "__main__":
+    run_once(prepare_stock_list)
     run_daily(prepare_stock_list, '9:05')
     run_daily(trade_afternoon, time='14:00') #检查持仓中的涨停股是否需要卖出
     run_daily(sell_stocks, time='10:00') # 止损函数
     run_daily(close_account, '14:50')
-    run_weekly(weekly_adjustment,3,'09:45')
+    run_weekly(weekly_adjustment,3,'10:00')
     
     run_scheduler()

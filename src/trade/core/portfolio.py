@@ -25,3 +25,13 @@ class Portfolio:
     
     def get_position(self, code):
         return self.positions.get(code, Position(code))
+    
+if __name__ == "__main__":
+    from src.service.portfolio import get_portfolio_sync
+    from ..config import current_user_id
+
+    portfolio_data = get_portfolio_sync(current_user_id)
+    portfolio = Portfolio(portfolio_data)
+    for code, position in portfolio.positions.items():
+        print(f"Code: {code}, Name: {position.name}, Position: {position}")
+    
